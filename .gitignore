@@ -1,0 +1,50 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Dependency directories
+node_modules/
+
+# Build output
+dist/
+build/
+dist-ssr/
+*.local
+
+# Environment variables
+.env
+.env.*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# Optional REACT_APP build cache
+.cache/
+
+# Vite cache
+vite.config.ts.timestamp*
+.vite/
+
+# Mac temp files
+*.swp
