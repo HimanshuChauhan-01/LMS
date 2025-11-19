@@ -5,19 +5,31 @@ const SignupModal = ({ onClose, onSwitchToLogin }) => {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState('student')
+  const [role, setRole] = useState('student') // UI role
+  const [errorMsg, setErrorMsg] = useState('')
   const [loading, setLoading] = useState(false)
   const { signup } = useAuth()
+
+  // Map UI role → API role
+  const mapRole = (r) => {
+    if (r === 'student') return 'STUDENT'
+    if (r === 'teacher') return 'FACULTY'
+    if (r === 'admin') return 'ADMIN'
+    return 'STUDENT'
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
-    
+    setErrorMsg('')
+
     try {
-      await signup(name, email, password, role)
+      const apiRole = mapRole(role)
+      await signup(name, email, password, apiRole)
       onClose()
     } catch (error) {
       console.error('Signup failed:', error)
+      setErrorMsg(error.message || 'Signup failed. Please try again.')
     } finally {
       setLoading(false)
     }

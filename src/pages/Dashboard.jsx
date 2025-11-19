@@ -18,7 +18,7 @@ const Dashboard = () => {
   }
 
   // Student Dashboard
-  if (user.role === 'student') {
+  if (user.role === 'STUDENT') {
     const enrolledCourses = courses.filter(course => 
       user.enrolledCourses.includes(course.id)
     )
@@ -137,7 +137,7 @@ const Dashboard = () => {
   }
 
   // Teacher Dashboard
-  if (user.role === 'teacher') {
+  if (user.role === 'FACULTY') {
     const teachingCourses = courses.filter(course => 
       course.teachers.includes(user.id)
     )
@@ -233,7 +233,7 @@ const Dashboard = () => {
   }
 
   // Admin Dashboard
-  if (user.role === 'admin') {
+  if (user.role === 'ADMIN') {
     const totalStudents = new Set(
       courses.flatMap(course => course.students || [])
     ).size

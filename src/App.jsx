@@ -15,6 +15,10 @@ import Dashboard from './pages/Dashboard'
 import AdminPanel from './pages/AdminPanel'
 import Profile from './pages/Profile'
 
+// New route protection wrappers
+import ProtectedRoute from './components/ProtectedRoute'
+import RoleRoute from './components/RoleRoute'
+
 function App() {
   return (
     <ThemeProvider>
@@ -26,15 +30,60 @@ function App() {
               <div className="flex">
                 <Sidebar />
                 <main className="flex-1 p-6">
+
                   <Routes>
+
+                    {/* Public */}
                     <Route path="/" element={<Home />} />
                     <Route path="/courses" element={<Courses />} />
                     <Route path="/course/:id" element={<CourseDetails />} />
-                    <Route path="/my-courses" element={<MyCourses />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/admin" element={<AdminPanel />} />
-                    <Route path="/profile" element={<Profile />} />
+
+                    {/* Student Only */}
+                    <Route
+                      path="/my-courses"
+                      element={
+                        <ProtectedRoute>
+                          <RoleRoute allowed={["STUDENT"]}>
+                            <MyCourses />
+                          </RoleRoute>
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    {/* Any Logged-In User */}
+                    <Route
+                      path="/dashboard"
+                      element={
+                        <ProtectedRoute>
+                          <Dashboard />
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    {/* Admin Only */}
+                    <Route
+                      path="/admin"
+                      element={
+                        <ProtectedRoute>
+                          <RoleRoute allowed={["ADMIN"]}>
+                            <AdminPanel />
+                          </RoleRoute>
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    {/* Any Logged-In User */}
+                    <Route
+                      path="/profile"
+                      element={
+                        <ProtectedRoute>
+                          <Profile />
+                        </ProtectedRoute>
+                      }
+                    />
+
                   </Routes>
+
                 </main>
               </div>
             </div>

@@ -4,19 +4,21 @@ import { useAuth } from '../context/AuthContext'
 const LoginModal = ({ onClose, onSwitchToSignup }) => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState('student')
+  const [errorMsg, setErrorMsg] = useState('')
   const [loading, setLoading] = useState(false)
   const { login } = useAuth()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
-    
+    setErrorMsg('')
+
     try {
-      await login(email, password, role)
+      await login(email, password)  // ✅ removed role, backend doesn't use it
       onClose()
     } catch (error) {
       console.error('Login failed:', error)
+      setErrorMsg(error.message || 'Login failed. Please try again.')
     } finally {
       setLoading(false)
     }

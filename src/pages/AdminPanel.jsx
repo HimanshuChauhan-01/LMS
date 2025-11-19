@@ -16,7 +16,7 @@ const AdminPanel = () => {
     thumbnail: ''
   })
 
-  if (!user || user.role !== 'admin') {
+  if (!user || user.role !== 'ADMIN') {
     return (
       <div className="max-w-4xl mx-auto text-center py-12">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
