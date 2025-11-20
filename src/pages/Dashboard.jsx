@@ -180,14 +180,14 @@ const Dashboard = () => {
 
         {/* Teaching Courses */}
         <div className="card">
-          <div className="flex justify-between items-center mb-6">
+          {/* <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
               Your Courses
             </h3>
             <button className="btn-primary">
               Create New Course
             </button>
-          </div>
+          </div> */}
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {teachingCourses.map(course => (

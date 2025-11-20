@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
+import toast from 'react-hot-toast'   // ✅ add toast
 
 const LoginModal = ({ onClose, onSwitchToSignup }) => {
   const [email, setEmail] = useState('')
@@ -14,11 +15,17 @@ const LoginModal = ({ onClose, onSwitchToSignup }) => {
     setErrorMsg('')
 
     try {
-      await login(email, password)  // ✅ removed role, backend doesn't use it
+      await login(email, password)  
+      
+      // ✅ Show toast on success
+      toast.success("Login successful!")
+
       onClose()
     } catch (error) {
       console.error('Login failed:', error)
       setErrorMsg(error.message || 'Login failed. Please try again.')
+
+      toast.error(error.message || "Login failed") // optional
     } finally {
       setLoading(false)
     }
@@ -68,7 +75,6 @@ const LoginModal = ({ onClose, onSwitchToSignup }) => {
             />
           </div>
 
-          
           <button
             type="submit"
             disabled={loading}

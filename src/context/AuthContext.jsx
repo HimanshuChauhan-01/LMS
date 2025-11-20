@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext();
-
 export const useAuth = () => useContext(AuthContext);
 
 const API_BASE = "https://lms-login.onrender.com/api/auth";
@@ -12,14 +11,12 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Save user + token to storage
   const persistAuth = (userObj, token) => {
     setUser(userObj);
     if (userObj) localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(userObj));
     if (token) localStorage.setItem(STORAGE_TOKEN_KEY, token);
   };
 
-  // Fetch profile using token
   const fetchUserByToken = async (token) => {
     try {
       const res = await fetch(`${API_BASE}/me`, {
@@ -28,26 +25,24 @@ export const AuthProvider = ({ children }) => {
       });
 
       if (!res.ok) return null;
-
       const data = await res.json();
 
-      // FIX: Add missing fields so Dashboard does not crash
-      const cleanedUser = {
+      return {
         id: data.id,
         name: data.name,
         email: data.email,
         role: data.role,
-        enrolledCourses: data.enrolledCourses || [],   // prevent undefined.includes()
-        avatar: data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}`
+        enrolledCourses: data.enrolledCourses || [],
+        avatar:
+          data.avatar ||
+          `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}`
       };
-
-      return cleanedUser;
     } catch {
       return null;
     }
   };
 
-  // Auto-login via token on page refresh
+  // Auto-login on refresh
   useEffect(() => {
     const init = async () => {
       const token = localStorage.getItem(STORAGE_TOKEN_KEY);
@@ -58,9 +53,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       const savedUser = localStorage.getItem(STORAGE_USER_KEY);
-      if (savedUser) {
-        setUser(JSON.parse(savedUser));
-      }
+      if (savedUser) setUser(JSON.parse(savedUser));
 
       const freshUser = await fetchUserByToken(token);
 
@@ -78,7 +71,7 @@ export const AuthProvider = ({ children }) => {
     init();
   }, []);
 
-  // LOGIN
+  // ✅ LOGIN (NO REDIRECT)
   const login = async (email, password) => {
     const res = await fetch(`${API_BASE}/login`, {
       method: "POST",
@@ -86,7 +79,10 @@ export const AuthProvider = ({ children }) => {
       body: JSON.stringify({ email, password })
     });
 
-    if (!res.ok) throw new Error("Invalid email or password");
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Invalid email or password" }));
+      throw new Error(err.message || "Invalid email or password");
+    }
 
     const data = await res.json();
     const token = data.token;
@@ -98,17 +94,11 @@ export const AuthProvider = ({ children }) => {
 
     persistAuth(freshUser, token);
 
-    // AUTO REDIRECT BASED ON ROLE
-    if (freshUser.role === "ADMIN") {
-      window.location.href = "/admin";
-    } else {
-      window.location.href = "/dashboard";
-    }
-
+    // 🔥 No redirect → user stays on current page
     return true;
   };
 
-  // SIGNUP
+  // ✅ SIGNUP (NO LOGIN, NO TOKEN NEEDED)
   const signup = async (name, email, password, role) => {
     const res = await fetch(`${API_BASE}/register`, {
       method: "POST",
@@ -116,21 +106,12 @@ export const AuthProvider = ({ children }) => {
       body: JSON.stringify({ name, email, password, role })
     });
 
-    if (!res.ok) throw new Error("Registration failed");
-
-    const data = await res.json();
-    const token = data.token;
-
-    const freshUser = await fetchUserByToken(token);
-    if (!freshUser) throw new Error("Could not load user after signup");
-
-    persistAuth(freshUser, token);
-
-    if (freshUser.role === "ADMIN") {
-      window.location.href = "/admin";
-    } else {
-      window.location.href = "/dashboard";
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: "Registration failed" }));
+      throw new Error(err.message || "Registration failed");
     }
+
+    return { message: "User created successfully" };
   };
 
   const logout = () => {

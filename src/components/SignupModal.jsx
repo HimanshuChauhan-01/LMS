@@ -1,16 +1,16 @@
 import React, { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
+import toast from 'react-hot-toast'
 
 const SignupModal = ({ onClose, onSwitchToLogin }) => {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState('student') // UI role
+  const [role, setRole] = useState('student')
   const [errorMsg, setErrorMsg] = useState('')
   const [loading, setLoading] = useState(false)
   const { signup } = useAuth()
 
-  // Map UI role → API role
   const mapRole = (r) => {
     if (r === 'student') return 'STUDENT'
     if (r === 'teacher') return 'FACULTY'
@@ -26,10 +26,17 @@ const SignupModal = ({ onClose, onSwitchToLogin }) => {
     try {
       const apiRole = mapRole(role)
       await signup(name, email, password, apiRole)
+
+      // 🔥 Toast on success
+      toast.success("Account created successfully!")
+
       onClose()
     } catch (error) {
       console.error('Signup failed:', error)
       setErrorMsg(error.message || 'Signup failed. Please try again.')
+
+      // Optional failure toast
+      toast.error(error.message || "Signup failed")
     } finally {
       setLoading(false)
     }
@@ -104,7 +111,6 @@ const SignupModal = ({ onClose, onSwitchToLogin }) => {
             >
               <option value="student">Student</option>
               <option value="teacher">Teacher</option>
-              <option value="admin">Admin</option>
             </select>
           </div>
 
