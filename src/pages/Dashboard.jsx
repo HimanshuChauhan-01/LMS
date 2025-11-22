@@ -3,6 +3,24 @@ import { useAuth } from '../context/AuthContext'
 import { useCourses } from '../context/CourseContext'
 import ProgressBar from '../components/ProgressBar'
 
+// 🔥 CATEGORY → IMAGE MAP
+const categoryImages = {
+  "Programming": "https://img.freepik.com/free-vector/programming-concept-illustration_114360-1351.jpg",
+  "Web Development": "https://img.freepik.com/free-vector/gradient-web-hosting-illustration_23-2149237109.jpg",
+  "Design": "https://img.freepik.com/free-vector/flat-design-illustration-ux-ui-design_23-2149032053.jpg",
+  "Business": "https://img.freepik.com/free-vector/flat-design-business-communication-concept_23-2149154244.jpg",
+  "Data Science": "https://img.freepik.com/free-vector/data-scientist-illustration_23-2148785638.jpg",
+};
+
+const getCourseImage = (course) => {
+  return (
+    course.thumbnail ||
+    categoryImages[course.category] ||
+    "https://img.freepik.com/free-vector/programming-concept-illustration_114360-1351.jpg"
+  );
+};
+
+
 const Dashboard = () => {
   const { user } = useAuth()
   const { courses } = useCourses()
@@ -17,18 +35,25 @@ const Dashboard = () => {
     )
   }
 
-  // Student Dashboard
+  // ============================
+  // 🔵 STUDENT DASHBOARD
+  // ============================
   if (user.role === 'STUDENT') {
-    const enrolledCourses = courses.filter(course => 
+    const enrolledCourses = courses.filter(course =>
       user.enrolledCourses.includes(course.id)
     )
+
     const totalLessons = enrolledCourses.reduce((acc, course) => acc + course.lessons.length, 0)
-    const completedLessons = enrolledCourses.reduce((acc, course) => 
-      acc + course.lessons.filter(lesson => lesson.completedBy?.includes(user.id)).length, 0
+
+    const completedLessons = enrolledCourses.reduce((acc, course) =>
+      acc + course.lessons.filter(lesson => lesson.completedBy?.includes(user.id)).length
+      , 0
     )
 
     return (
       <div className="max-w-6xl mx-auto">
+
+        {/* HEADER */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             Student Dashboard
@@ -38,7 +63,7 @@ const Dashboard = () => {
           </p>
         </div>
 
-        {/* Stats */}
+        {/* STATS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="card text-center">
             <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-2">
@@ -60,22 +85,27 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Recent Progress */}
+        {/* RECENT PROGRESS */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+          {/* CONTINUE LEARNING */}
           <div className="card">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
               Continue Learning
             </h3>
+
             <div className="space-y-4">
               {enrolledCourses.slice(0, 3).map(course => {
-                const progress = Math.round((course.lessons.filter(lesson => 
-                  lesson.completedBy?.includes(user.id)
-                ).length / course.lessons.length) * 100) || 0
-                
+                const progress = Math.round(
+                  (course.lessons.filter(lesson =>
+                    lesson.completedBy?.includes(user.id)
+                  ).length / course.lessons.length) * 100
+                ) || 0
+
                 return (
                   <div key={course.id} className="flex items-center space-x-4 p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
-                    <img 
-                      src={course.thumbnail} 
+                    <img
+                      src={getCourseImage(course)}
                       alt={course.title}
                       className="w-16 h-12 object-cover rounded"
                     />
@@ -85,10 +115,7 @@ const Dashboard = () => {
                       </h4>
                       <ProgressBar progress={progress} size="sm" showLabel={false} />
                     </div>
-                    <a 
-                      href={`/course/${course.id}`}
-                      className="btn-primary text-sm px-3 py-1"
-                    >
+                    <a href={`/course/${course.id}`} className="btn-primary text-sm px-3 py-1">
                       Continue
                     </a>
                   </div>
@@ -97,18 +124,20 @@ const Dashboard = () => {
             </div>
           </div>
 
+          {/* RECOMMENDED */}
           <div className="card">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
               Recommended Courses
             </h3>
+
             <div className="space-y-3">
               {courses
                 .filter(course => !user.enrolledCourses.includes(course.id))
                 .slice(0, 3)
                 .map(course => (
                   <div key={course.id} className="flex items-center space-x-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
-                    <img 
-                      src={course.thumbnail} 
+                    <img
+                      src={getCourseImage(course)}
                       alt={course.title}
                       className="w-12 h-12 object-cover rounded"
                     />
@@ -120,33 +149,28 @@ const Dashboard = () => {
                         {course.category} • {course.difficulty}
                       </p>
                     </div>
-                    <a 
-                      href={`/course/${course.id}`}
-                      className="btn-secondary text-sm px-3 py-1"
-                    >
+                    <a href={`/course/${course.id}`} className="btn-secondary text-sm px-3 py-1">
                       View
                     </a>
                   </div>
-                ))
-              }
+                ))}
             </div>
           </div>
+
         </div>
       </div>
     )
   }
 
-  // Teacher Dashboard
+  // ============================
+  // 🟣 FACULTY DASHBOARD
+  // ============================
   if (user.role === 'FACULTY') {
-    const teachingCourses = courses.filter(course => 
-      course.teachers.includes(user.id)
-    )
-    const totalStudents = teachingCourses.reduce((acc, course) => 
-      acc + (course.students?.length || 0), 0
-    )
+    const teachingCourses = courses.filter(course => course.teachers.includes(user.id))
 
     return (
       <div className="max-w-6xl mx-auto">
+
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             Teacher Dashboard
@@ -156,45 +180,15 @@ const Dashboard = () => {
           </p>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="card text-center">
-            <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-2">
-              {teachingCourses.length}
-            </div>
-            <div className="text-gray-600 dark:text-gray-300">Courses Teaching</div>
-          </div>
-          <div className="card text-center">
-            <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-2">
-              {totalStudents}
-            </div>
-            <div className="text-gray-600 dark:text-gray-300">Total Students</div>
-          </div>
-          <div className="card text-center">
-            <div className="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-2">
-              {teachingCourses.reduce((acc, course) => acc + course.lessons.length, 0)}
-            </div>
-            <div className="text-gray-600 dark:text-gray-300">Lessons Created</div>
-          </div>
-        </div>
-
-        {/* Teaching Courses */}
+        {/* COURSES LIST */}
         <div className="card">
-          {/* <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Your Courses
-            </h3>
-            <button className="btn-primary">
-              Create New Course
-            </button>
-          </div> */}
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {teachingCourses.map(course => (
               <div key={course.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                 <div className="flex items-start space-x-4">
-                  <img 
-                    src={course.thumbnail} 
+                  <img
+                    src={getCourseImage(course)}
                     alt={course.title}
                     className="w-20 h-16 object-cover rounded"
                   />
@@ -206,10 +200,7 @@ const Dashboard = () => {
                       {course.students?.length || 0} students • {course.lessons.length} lessons
                     </p>
                     <div className="flex space-x-2">
-                      <a 
-                        href={`/course/${course.id}`}
-                        className="btn-primary text-sm px-3 py-1"
-                      >
+                      <a href={`/course/${course.id}`} className="btn-primary text-sm px-3 py-1">
                         Manage
                       </a>
                       <button className="btn-secondary text-sm px-3 py-1">
@@ -228,15 +219,16 @@ const Dashboard = () => {
             </div>
           )}
         </div>
+
       </div>
     )
   }
 
-  // Admin Dashboard
+  // ============================
+  // 🔴 ADMIN DASHBOARD
+  // ============================
   if (user.role === 'ADMIN') {
-    const totalStudents = new Set(
-      courses.flatMap(course => course.students || [])
-    ).size
+    const totalStudents = new Set(courses.flatMap(course => course.students || [])).size
 
     return (
       <div className="max-w-6xl mx-auto">

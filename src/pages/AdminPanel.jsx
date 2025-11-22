@@ -1,22 +1,118 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useCourses } from '../context/CourseContext'
 
+/* CATEGORY → IMAGE MAP */
+const categoryImages = {
+  Programming: "https://img.freepik.com/free-vector/programming-concept-illustration_114360-1351.jpg",
+  "Web Development": "https://img.freepik.com/free-vector/gradient-web-hosting-illustration_23-2149237109.jpg",
+  Design: "https://img.freepik.com/free-vector/flat-design-illustration-ux-ui-design_23-2149032053.jpg",
+  Business: "https://img.freepik.com/free-vector/flat-design-business-communication-concept_23-2149154244.jpg",
+  "Data Science": "https://img.freepik.com/free-vector/data-scientist-illustration_23-2148785638.jpg"
+}
+
+const getAdminImage = (course) => {
+  return course.thumbnail?.trim()
+    ? course.thumbnail
+    : categoryImages[course.category] ||
+        "https://img.freepik.com/free-vector/programming-concept-illustration_114360-1351.jpg"
+}
+
 const AdminPanel = () => {
   const { user } = useAuth()
-  const { courses, addCourse, assignTeacher, deleteCourse } = useCourses()
-  const [activeTab, setActiveTab] = useState('courses')
+  const { courses, addCourse, deleteCourse } = useCourses()
+
+  const [activeTab, setActiveTab] = useState("courses")
   const [showAddCourse, setShowAddCourse] = useState(false)
+  const [loadingAdd, setLoadingAdd] = useState(false)
+  const [deleteLoadingId, setDeleteLoadingId] = useState(null)
+  const [teachers, setTeachers] = useState([])
+
   const [newCourse, setNewCourse] = useState({
-    title: '',
-    description: '',
-    category: 'Web Development',
-    difficulty: 'Beginner',
-    duration: '',
-    thumbnail: ''
+    name: "",
+    description: "",
+    type: "Programming",
+    level: "Beginner",
+    duration: "",
   })
 
-  if (!user || user.role !== 'ADMIN') {
+  /* ============================================
+      FETCH TEACHERS FROM API
+  ============================================= */
+  useEffect(() => {
+    const loadTeachers = async () => {
+      try {
+        const res = await fetch("https://lms-login.onrender.com/api/auth/faculty")
+        const data = await res.json()
+        setTeachers(data)
+      } catch (err) {
+        console.log("Failed to load teachers", err)
+      }
+    }
+    loadTeachers()
+  }, [])
+
+  /* ============================================
+       ADD COURSE — POST API (with loader)
+  ============================================= */
+  const handleAddCourse = async (e) => {
+    e.preventDefault()
+    setLoadingAdd(true)
+
+    try {
+      const response = await fetch(
+        "https://course-api-9imo.onrender.com/api/courses/add",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newCourse),
+        }
+      )
+
+      if (!response.ok) {
+        alert("Failed to add course")
+      } else {
+        await addCourse() // refresh list (you already load from API)
+        alert("Course added successfully!")
+        setShowAddCourse(false)
+      }
+    } catch (err) {
+      console.log(err)
+      alert("Error adding course")
+    }
+
+    setLoadingAdd(false)
+  }
+
+  /* ============================================
+        DELETE COURSE HANDLER (with loader)
+  ============================================= */
+  const handleDeleteCourse = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this course?")) return
+
+    setDeleteLoadingId(id)
+
+    try {
+      const response = await fetch(
+        `https://course-api-9imo.onrender.com/api/courses/delete/${id}`,
+        { method: "DELETE" }
+      )
+
+      if (!response.ok) {
+        alert("Delete failed")
+      } else {
+        await deleteCourse(id)
+        alert("Deleted successfully")
+      }
+    } catch (err) {
+      console.log(err)
+      alert("Error deleting course")
+    }
+
+    setDeleteLoadingId(null)
+  }
+
+  if (!user || user.role !== "ADMIN") {
     return (
       <div className="max-w-4xl mx-auto text-center py-12">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
@@ -29,38 +125,6 @@ const AdminPanel = () => {
     )
   }
 
-  const handleAddCourse = (e) => {
-    e.preventDefault()
-    addCourse(newCourse)
-    setNewCourse({
-      title: '',
-      description: '',
-      category: 'Web Development',
-      difficulty: 'Beginner',
-      duration: '',
-      thumbnail: ''
-    })
-    setShowAddCourse(false)
-  }
-
-  const handleAssignTeacher = (courseId, teacherId) => {
-    assignTeacher(courseId, teacherId)
-  }
-
-  const handleDeleteCourse = (courseId) => {
-    if (window.confirm('Are you sure you want to delete this course?')) {
-      deleteCourse(courseId)
-    }
-  }
-
-  // Mock teachers data
-  const teachers = [
-    { id: 't1', name: 'Sarah Johnson', email: 'sarah@example.com', status: 'approved' },
-    { id: 't2', name: 'Mike Chen', email: 'mike@example.com', status: 'approved' },
-    { id: 't3', name: 'Emily Davis', email: 'emily@example.com', status: 'pending' },
-    { id: 't4', name: 'Alex Rodriguez', email: 'alex@example.com', status: 'approved' },
-  ]
-
   return (
     <div className="max-w-7xl mx-auto">
       <div className="mb-8">
@@ -72,17 +136,17 @@ const AdminPanel = () => {
         </p>
       </div>
 
-      {/* Tabs */}
+      {/* ---------------- TABS ---------------- */}
       <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
         <nav className="flex space-x-8">
-          {['courses', 'teachers', 'users', 'settings'].map(tab => (
+          {["courses", "teachers", "users", "settings"].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`py-2 px-1 border-b-2 font-medium text-sm capitalize ${
                 activeTab === tab
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                  ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
             >
               {tab}
@@ -91,28 +155,26 @@ const AdminPanel = () => {
         </nav>
       </div>
 
-      {/* Courses Tab */}
-      {activeTab === 'courses' && (
+      {/* ---------------- COURSES TAB ---------------- */}
+      {activeTab === "courses" && (
         <div>
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
               Course Management
             </h2>
-            <button
-              onClick={() => setShowAddCourse(true)}
-              className="btn-primary"
-            >
+            <button onClick={() => setShowAddCourse(true)} className="btn-primary">
               Add New Course
             </button>
           </div>
 
           <div className="grid grid-cols-1 gap-6">
-            {courses.map(course => (
+            {courses.map((course) => (
               <div key={course.id} className="card">
                 <div className="flex items-start justify-between">
+
                   <div className="flex items-start space-x-4">
-                    <img 
-                      src={course.thumbnail} 
+                    <img
+                      src={getAdminImage(course)}
                       alt={course.title}
                       className="w-20 h-16 object-cover rounded"
                     />
@@ -121,30 +183,22 @@ const AdminPanel = () => {
                         {course.title}
                       </h3>
                       <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">
-                        {course.category} • {course.difficulty} • {course.students?.length || 0} students
+                        {course.category} • {course.difficulty}
                       </p>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
-                          {course.lessons.length} lessons
-                        </span>
-                        <span className="text-xs px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded">
-                          ⭐ {course.rating}
-                        </span>
-                      </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex space-x-2">
-                    <button className="btn-secondary text-sm px-3 py-1">
-                      Edit
-                    </button>
-                    <button 
+                    <button className="btn-secondary text-sm px-3 py-1">Edit</button>
+
+                    <button
                       onClick={() => handleDeleteCourse(course.id)}
-                      className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-sm px-3 py-1 rounded hover:bg-red-200 dark:hover:bg-red-800"
+                      className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-sm px-3 py-1 rounded"
                     >
-                      Delete
+                      {deleteLoadingId === course.id ? "Deleting..." : "Delete"}
                     </button>
                   </div>
+
                 </div>
               </div>
             ))}
@@ -152,193 +206,117 @@ const AdminPanel = () => {
         </div>
       )}
 
-      {/* Teachers Tab */}
-      {activeTab === 'teachers' && (
+      {/* ---------------- TEACHERS TAB ---------------- */}
+      {activeTab === "teachers" && (
         <div>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-            Teacher Management
+            Faculty Members
           </h2>
 
           <div className="grid grid-cols-1 gap-6">
-            {teachers.map(teacher => (
-              <div key={teacher.id} className="card">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center">
-                      <span className="text-lg">👨‍🏫</span>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white">
-                        {teacher.name}
-                      </h3>
-                      <p className="text-gray-600 dark:text-gray-300 text-sm">
-                        {teacher.email}
-                      </p>
-                    </div>
+            {teachers.map((t) => (
+              <div key={t.id} className="card flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center">
+                    👨‍🏫
                   </div>
-                  
-                  <div className="flex items-center space-x-4">
-                    <span className={`px-3 py-1 rounded-full text-sm ${
-                      teacher.status === 'approved' 
-                        ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-                        : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
-                    }`}>
-                      {teacher.status}
-                    </span>
-                    
-                    {teacher.status === 'pending' && (
-                      <div className="flex space-x-2">
-                        <button className="btn-primary text-sm px-3 py-1">
-                          Approve
-                        </button>
-                        <button className="btn-secondary text-sm px-3 py-1">
-                          Reject
-                        </button>
-                      </div>
-                    )}
-                    
-                    {teacher.status === 'approved' && (
-                      <select 
-                        className="input-field text-sm"
-                        onChange={(e) => handleAssignTeacher('c1', teacher.id)}
-                      >
-                        <option>Assign to Course</option>
-                        {courses.map(course => (
-                          <option key={course.id} value={course.id}>
-                            {course.title}
-                          </option>
-                        ))}
-                      </select>
-                    )}
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">
+                      {t.name}
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm">
+                      {t.email}
+                    </p>
                   </div>
                 </div>
+
+                <span className="px-3 py-1 bg-green-200 text-green-900 rounded-full text-sm">
+                  Approved
+                </span>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Add Course Modal */}
+      {/* ---------------- ADD COURSE MODAL ---------------- */}
       {showAddCourse && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-2xl">
+
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-gray-900 dark:text-white">
                 Add New Course
               </h3>
               <button
                 onClick={() => setShowAddCourse(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                className="text-gray-500 hover:text-gray-700"
               >
                 ✕
               </button>
             </div>
 
             <form onSubmit={handleAddCourse} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Course Title
-                  </label>
-                  <input
-                    type="text"
-                    value={newCourse.title}
-                    onChange={(e) => setNewCourse({...newCourse, title: e.target.value})}
-                    className="input-field"
-                    required
-                  />
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Category
-                  </label>
-                  <select
-                    value={newCourse.category}
-                    onChange={(e) => setNewCourse({...newCourse, category: e.target.value})}
-                    className="input-field"
-                  >
-                    <option value="Web Development">Web Development</option>
-                    <option value="Programming">Programming</option>
-                    <option value="Design">Design</option>
-                    <option value="Business">Business</option>
-                    <option value="Data Science">Data Science</option>
-                  </select>
-                </div>
-              </div>
+              <input
+                type="text"
+                placeholder="Course Name"
+                className="input-field"
+                required
+                value={newCourse.name}
+                onChange={(e) => setNewCourse({ ...newCourse, name: e.target.value })}
+              />
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Description
-                </label>
-                <textarea
-                  value={newCourse.description}
-                  onChange={(e) => setNewCourse({...newCourse, description: e.target.value})}
+              <textarea
+                placeholder="Course Description"
+                className="input-field"
+                rows="3"
+                required
+                value={newCourse.description}
+                onChange={(e) => setNewCourse({ ...newCourse, description: e.target.value })}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <select
                   className="input-field"
-                  rows="3"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Difficulty
-                  </label>
-                  <select
-                    value={newCourse.difficulty}
-                    onChange={(e) => setNewCourse({...newCourse, difficulty: e.target.value})}
-                    className="input-field"
-                  >
-                    <option value="Beginner">Beginner</option>
-                    <option value="Intermediate">Intermediate</option>
-                    <option value="Advanced">Advanced</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Duration
-                  </label>
-                  <input
-                    type="text"
-                    value={newCourse.duration}
-                    onChange={(e) => setNewCourse({...newCourse, duration: e.target.value})}
-                    className="input-field"
-                    placeholder="e.g., 12 hours"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Thumbnail URL
-                  </label>
-                  <input
-                    type="url"
-                    value={newCourse.thumbnail}
-                    onChange={(e) => setNewCourse({...newCourse, thumbnail: e.target.value})}
-                    className="input-field"
-                    placeholder="https://example.com/image.jpg"
-                  />
-                </div>
-              </div>
-
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="submit"
-                  className="flex-1 btn-primary"
+                  value={newCourse.type}
+                  onChange={(e) => setNewCourse({ ...newCourse, type: e.target.value })}
                 >
-                  Create Course
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowAddCourse(false)}
-                  className="flex-1 btn-secondary"
+                  <option>Programming</option>
+                  <option>Web Development</option>
+                  <option>Design</option>
+                  <option>Business</option>
+                  <option>Data Science</option>
+                </select>
+
+                <select
+                  className="input-field"
+                  value={newCourse.level}
+                  onChange={(e) => setNewCourse({ ...newCourse, level: e.target.value })}
                 >
-                  Cancel
-                </button>
+                  <option>Beginner</option>
+                  <option>Intermediate</option>
+                  <option>Advanced</option>
+                </select>
               </div>
+
+              <input
+                type="text"
+                placeholder="Duration (e.g. 3 Months)"
+                className="input-field"
+                required
+                value={newCourse.duration}
+                onChange={(e) => setNewCourse({ ...newCourse, duration: e.target.value })}
+              />
+
+              <button
+                type="submit"
+                className="btn-primary w-full"
+                disabled={loadingAdd}
+              >
+                {loadingAdd ? "Adding..." : "Add Course"}
+              </button>
+
             </form>
           </div>
         </div>

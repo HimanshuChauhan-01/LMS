@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
-import { sampleCourses } from '../data/sampleCourses'
 
 const CourseContext = createContext()
 
@@ -13,107 +12,134 @@ export const useCourses = () => {
 
 export const CourseProvider = ({ children }) => {
   const [courses, setCourses] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [actionLoading, setActionLoading] = useState(false) // For add/delete loading
 
-  useEffect(() => {
-    // Load courses from localStorage or use sample data
-    const storedCourses = localStorage.getItem('lms_courses')
-    if (storedCourses) {
-      setCourses(JSON.parse(storedCourses))
-    } else {
-      setCourses(sampleCourses)
-      localStorage.setItem('lms_courses', JSON.stringify(sampleCourses))
+  // ==========================
+  // FETCH ALL COURSES
+  // ==========================
+  const fetchCourses = async () => {
+    try {
+      const res = await fetch("https://course-api-9imo.onrender.com/api/courses")
+      const data = await res.json()
+
+      const formatted = data.map(c => ({
+        id: c.id,
+        title: c.name,
+        duration: c.duration,
+        category: c.type.trim(),
+        difficulty: c.level
+          ? c.level.charAt(0).toUpperCase() + c.level.slice(1).toLowerCase()
+          : "Beginner",
+        description: c.description,
+        thumbnail: "", // fallback image handled elsewhere
+        lessons: [],
+        teachers: [],
+        students: []
+      }))
+
+      setCourses(formatted)
+    } catch (err) {
+      console.error("Failed to fetch courses:", err)
+    } finally {
+      setLoading(false)
     }
-  }, [])
-
-  const updateCourses = (newCourses) => {
-    setCourses(newCourses)
-    localStorage.setItem('lms_courses', JSON.stringify(newCourses))
   }
 
-  // Student functions
-  const enrollStudent = (courseId, userId) => {
-    const updatedCourses = courses.map(course => 
-      course.id === courseId 
-        ? { ...course, students: [...(course.students || []), userId] }
-        : course
-    )
-    updateCourses(updatedCourses)
-  }
+  useEffect(() => { fetchCourses() }, [])
 
-  const markLessonComplete = (courseId, lessonId, userId) => {
-    const updatedCourses = courses.map(course => {
-      if (course.id === courseId) {
-        const updatedLessons = course.lessons.map(lesson =>
-          lesson.id === lessonId 
-            ? { ...lesson, completedBy: [...(lesson.completedBy || []), userId] }
-            : lesson
-        )
-        return { ...course, lessons: updatedLessons }
+  // ==========================
+  // ADD COURSE API
+  // ==========================
+  const addCourse = async (courseData) => {
+    try {
+      setActionLoading(true)
+
+      const payload = {
+        name: courseData.title,
+        duration: courseData.duration,
+        type: courseData.category,
+        level: courseData.difficulty,
+        description: courseData.description
       }
-      return course
-    })
-    updateCourses(updatedCourses)
-  }
 
-  // Teacher functions
-  const addLesson = (courseId, lessonData) => {
-    const updatedCourses = courses.map(course =>
-      course.id === courseId
-        ? { ...course, lessons: [...course.lessons, { ...lessonData, id: `l${Date.now()}` }] }
-        : course
-    )
-    updateCourses(updatedCourses)
-  }
+      const res = await fetch("https://course-api-9imo.onrender.com/api/courses/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
 
-  const updateLesson = (courseId, lessonId, data) => {
-    const updatedCourses = courses.map(course => {
-      if (course.id === courseId) {
-        const updatedLessons = course.lessons.map(lesson =>
-          lesson.id === lessonId ? { ...lesson, ...data } : lesson
-        )
-        return { ...course, lessons: updatedLessons }
+      if (!res.ok) {
+        alert("Failed to add course")
+        return
       }
-      return course
-    })
-    updateCourses(updatedCourses)
-  }
 
-  // Admin functions
-  const addCourse = (courseData) => {
-    const newCourse = {
-      ...courseData,
-      id: `c${Date.now()}`,
-      lessons: [],
-      teachers: [],
-      students: []
+      const newCourse = await res.json()
+
+      // Add to local UI list
+      setCourses(prev => [
+        ...prev,
+        {
+          id: newCourse.id,
+          title: newCourse.name,
+          duration: newCourse.duration,
+          category: newCourse.type,
+          difficulty: newCourse.level,
+          description: newCourse.description,
+          thumbnail: "",
+          lessons: [],
+          teachers: [],
+          students: []
+        }
+      ])
+
+      alert("Course added successfully!")
+
+    } catch (err) {
+      console.error("Add course error:", err)
+    } finally {
+      setActionLoading(false)
     }
-    const updatedCourses = [...courses, newCourse]
-    updateCourses(updatedCourses)
   }
 
-  const assignTeacher = (courseId, teacherId) => {
-    const updatedCourses = courses.map(course =>
-      course.id === courseId
-        ? { ...course, teachers: [...new Set([...course.teachers, teacherId])] }
-        : course
-    )
-    updateCourses(updatedCourses)
+  // ==========================
+  // DELETE COURSE API
+  // ==========================
+  const deleteCourse = async (id) => {
+    try {
+      setActionLoading(true)
+
+      const res = await fetch(`https://course-api-9imo.onrender.com/api/courses/delete/${id}`, {
+        method: "DELETE"
+      })
+
+      if (!res.ok) {
+        alert("Failed to delete course")
+        return
+      }
+
+      // Update list instantly
+      setCourses(prev => prev.filter(c => c.id !== id))
+
+      alert("Course deleted!")
+
+    } catch (err) {
+      console.error("Delete error:", err)
+    } finally {
+      setActionLoading(false)
+    }
   }
 
-  const deleteCourse = (courseId) => {
-    const updatedCourses = courses.filter(course => course.id !== courseId)
-    updateCourses(updatedCourses)
-  }
-
+  // ====================================================
+  // PROVIDER VALUE
+  // ====================================================
   const value = {
     courses,
-    enrollStudent,
-    markLessonComplete,
-    addLesson,
-    updateLesson,
+    loading,
+    actionLoading,
     addCourse,
-    assignTeacher,
-    deleteCourse
+    deleteCourse,
+    fetchCourses
   }
 
   return (
